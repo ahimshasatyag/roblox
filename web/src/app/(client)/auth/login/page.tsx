@@ -4,17 +4,14 @@ import LoginForm from "@/features/auth/login/login-form"
 import { useEffect } from "react"
 import { useAuth } from "@/stores/auth/auth"
 import { useRouter } from "next/navigation"
+import { applyTheme, themeColors } from "@/helper/theme"
 
 export default function Login() {
   const { token, setToken } = useAuth()
   const router = useRouter()
   useEffect(() => {
-    if (!token && typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|; )accessToken=([^;]*)/)
-      const t = match ? decodeURIComponent(match[1]) : null
-      if (t) setToken(t)
-    }
-  }, [token, setToken])
+    applyTheme(themeColors)
+  }, [])
   useEffect(() => {
     if (token) {
       router.replace("/home")

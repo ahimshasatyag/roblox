@@ -92,6 +92,7 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	ag.POST("/pembayaran", admin.CreatePembayaran)
 	ag.PUT("/pembayaran/:id", admin.UpdatePembayaran)
 	ag.DELETE("/pembayaran/:id", admin.DeletePembayaran)
+	ag.GET("/menus", admin.ListMenus)
 
 	cg := r.Group("/client")
 	cg.Use(middleware.Auth(secret), middleware.Scope("client"))

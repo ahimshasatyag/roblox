@@ -95,7 +95,7 @@ func (h *ClientHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
-	c.SetCookie("accessToken", token, 60*60*24, "/", "", false, false)
+	c.SetCookie("client_accessToken", token, 60*60*24, "/", "", false, false)
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
@@ -213,7 +213,7 @@ func (h *ClientHandler) UploadAvatar(c *gin.Context) {
 }
 
 func (h *ClientHandler) Logout(c *gin.Context) {
-	c.SetCookie("accessToken", "", -1, "/", "", false, false)
+	c.SetCookie("client_accessToken", "", -1, "/", "", false, false)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 

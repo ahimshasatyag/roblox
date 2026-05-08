@@ -1,24 +1,14 @@
 import { http, setAccessTokenCookie, clearAccessTokenCookie } from "@/lib/http"
 import type {
-  LoginAdminReq,
   LoginClientReq,
   TokenRes,
   RegisterClientReq,
   UserAccount,
-  MeAdminRes,
   MeClientRes,
   UpdateClientReq,
 } from "@/types/auth/auth"
 import { API_URL } from "@/config"
 
-export async function loginAdmin(data: LoginAdminReq) {
-  const res = await http<TokenRes>("/admin/login", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-  setAccessTokenCookie(res.token)
-  return res.token
-}
 
 export async function loginClient(data: LoginClientReq) {
   const res = await http<TokenRes>("/client/login", {
@@ -29,11 +19,6 @@ export async function loginClient(data: LoginClientReq) {
   return res.token
 }
 
-export async function meAdmin(token: string) {
-  return await http<MeAdminRes>("/admin/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-}
 
 export async function meClient(token: string) {
   return await http<MeClientRes>("/client/me", {
@@ -48,15 +33,13 @@ export async function registerClient(data: RegisterClientReq) {
   })
 }
 
-export async function logout() {
+export async function logoutClient() {
   try {
     await http<{ ok: boolean }>("/client/logout", { method: "POST" })
   } catch {}
-  try {
-    await http<{ ok: boolean }>("/admin/logout", { method: "POST" })
-  } catch {}
-  clearAccessTokenCookie()
+  clearAccessTokenCookie("client")
 }
+
 
 export async function updateClientMe(token: string, data: UpdateClientReq) {
   return await http<{ user_account: UserAccount }>("/client/me", {

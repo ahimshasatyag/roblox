@@ -1,6 +1,7 @@
 import { API_URL } from "@/config"
 
-const ACCESS_TOKEN_COOKIE = "accessToken"
+const ADMIN_COOKIE = "admin_accessToken"
+const CLIENT_COOKIE = "client_accessToken"
 
 function getCookie(name: string) {
   if (typeof document === "undefined") return null
@@ -8,14 +9,28 @@ function getCookie(name: string) {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-export function setAccessTokenCookie(token: string, maxAgeSeconds = 60 * 60 * 24) {
+export function setAccessTokenCookie(token: string, scope?: "admin" | "client", maxAgeSeconds = 60 * 60 * 24) {
   if (typeof document === "undefined") return
-  document.cookie = `${ACCESS_TOKEN_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=${maxAgeSeconds}; samesite=lax`
+  
+  let detectedScope = scope
+  if (!detectedScope) {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]))
+      detectedScope = payload.scope === "admin" ? "admin" : "client"
+    } catch {
+      detectedScope = "client"
+    }
+  }
+
+  const name = detectedScope === "admin" ? ADMIN_COOKIE : CLIENT_COOKIE
+  document.cookie = `${name}=${encodeURIComponent(token)}; path=/; max-age=${maxAgeSeconds}; samesite=lax`
 }
 
-export function clearAccessTokenCookie() {
+export function clearAccessTokenCookie(scope: "admin" | "client") {
   if (typeof document === "undefined") return
-  document.cookie = `${ACCESS_TOKEN_COOKIE}=; path=/; max-age=0; samesite=lax`
+  const name = scope === "admin" ? ADMIN_COOKIE : CLIENT_COOKIE
+  console.log(`[HTTP] Clearing cookie: ${name}`)
+  document.cookie = `${name}=; path=/; max-age=0; samesite=lax`
 }
 
 export async function http<T>(
@@ -27,8 +42,12 @@ export async function http<T>(
     ...(options.headers as Record<string, string> | undefined),
   }
   if (!headers["Authorization"]) {
-    const token = getCookie(ACCESS_TOKEN_COOKIE)
-    if (token) headers["Authorization"] = `Bearer ${token}`
+    const isAdmin = path.startsWith("/admin")
+    const cookieName = isAdmin ? ADMIN_COOKIE : CLIENT_COOKIE
+    const token = getCookie(cookieName)
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
   }
   const res = await fetch(`${API_URL}${path}`, {
     headers: {

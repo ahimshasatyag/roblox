@@ -1,7 +1,6 @@
 export type LoginAdminReq = { username: string; password: string }
 export type LoginClientReq = { email: string; password: string }
 export type TokenRes = { token: string }
-export type AccessTokenCookieName = "accessToken"
 
 export type User = {
   id: number

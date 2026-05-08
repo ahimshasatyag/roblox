@@ -1,5 +1,5 @@
 "use client"
- 
+
 import { createContext, useContext, useMemo, useState, useEffect } from "react"
 import { setAccessTokenCookie, clearAccessTokenCookie, http } from "@/lib/http"
 
@@ -32,7 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userPic, setUserPic] = useState<string | null>(null)
 
   useEffect(() => {
-    const m = document.cookie.match(/(?:^|; )accessToken=([^;]*)/)
+    // Khusus client_accessToken
+    const m = document.cookie.match(/(?:^|; )client_accessToken=([^;]*)/)
+    
     if (m?.[1]) {
       const t = decodeURIComponent(m[1])
       setTokenState(t)
@@ -42,36 +44,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async (t: string) => {
     try {
-      const res = await http<{ user_account: any }>("/client/me", {
+      const res = await http<any>("/client/me", {
         headers: { Authorization: `Bearer ${t}` }
       })
+      
       if (res.user_account) {
         setUserName(res.user_account.full_name)
         setUserEmail(res.user_account.email)
         setUserPic(res.user_account.pic)
       }
-    } catch {
-      setToken(null)
+    } catch (e: any) {
+      console.error("Auth validation failed:", e)
+      if (e.message.includes("401") || e.message.includes("unauthorized")) {
+        setToken(null)
+      }
     }
   }
 
   const setToken = (t: string | null) => {
     setTokenState(t)
     if (typeof document === "undefined") return
+    
     if (t) {
-      setAccessTokenCookie(t)
+      setAccessTokenCookie(t, "client")
       fetchUser(t)
     } else {
-      clearAccessTokenCookie()
+      console.log("[ClientAuth] Logging out client...")
+      clearAccessTokenCookie("client")
       setUserName(null)
       setUserEmail(null)
       setUserPic(null)
     }
   }
+
   const value = useMemo(
     () => ({ token, setToken, userName, userEmail, userPic, setUserName, setUserEmail, setUserPic }),
     [token, userName, userEmail, userPic]
   )
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

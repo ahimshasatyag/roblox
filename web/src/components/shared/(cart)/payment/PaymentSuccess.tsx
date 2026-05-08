@@ -91,7 +91,7 @@ export default function PaymentSuccess({ method, amount, account, invoice }: Pro
               text="Cek Status Pesanan" 
               variant="primary" 
               className="w-full"
-              onClick={() => router.push("/pesanan")} 
+              onClick={() => window.location.href = "/pesanan"} 
             />
             <Button 
               text="Kembali ke Beranda" 

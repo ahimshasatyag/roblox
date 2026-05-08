@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import { applyTheme, themeColors } from "@/helper/theme"
 import { useAuth } from "@/stores/auth/auth"
-import { meClient, meAdmin, logout } from "@/services/auth/auth"
+import { meClient, logoutClient } from "@/services/auth/auth"
 import { ShoppingCart } from "lucide-react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
@@ -65,13 +65,6 @@ const ThemeSwitch = dynamic(() => import("@/components/ui/theme-switch"), { ssr:
         }
         return
       } catch {
-      }
-      try {
-        const ma = await meAdmin(token)
-        if (!cancelled) {
-          updateUser(ma.user?.username ?? null, ma.user?.email ?? null, null)
-        }
-      } catch {
         if (!cancelled) {
           updateUser(null, null, null)
         }
@@ -90,7 +83,7 @@ const ThemeSwitch = dynamic(() => import("@/components/ui/theme-switch"), { ssr:
   }
 
   const signOut = async () => {
-    await logout()
+    await logoutClient()
     setToken(null)
     setMenuOpenDesktop(false)
     setMenuOpenMobile(false)

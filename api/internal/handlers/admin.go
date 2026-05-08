@@ -72,7 +72,7 @@ func (h *AdminHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
-	c.SetCookie("accessToken", token, 60*60*24, "/", "", false, false)
+	c.SetCookie("admin_accessToken", token, 60*60*24, "/", "", false, false)
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
@@ -93,7 +93,7 @@ func (h *AdminHandler) Me(c *gin.Context) {
 }
 
 func (h *AdminHandler) Logout(c *gin.Context) {
-	c.SetCookie("accessToken", "", -1, "/", "", false, false)
+	c.SetCookie("admin_accessToken", "", -1, "/", "", false, false)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -678,4 +678,14 @@ func (h *AdminHandler) DeletePembayaran(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *AdminHandler) ListMenus(c *gin.Context) {
+	var items []models.MenuAdmin
+	err := h.DB.Select(&items, "SELECT id_menu, nm_menu, id_parent, no_urut, nm_folder, nm_icon FROM menu_admin ORDER BY no_urut ASC")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"menus": items})
 }

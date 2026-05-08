@@ -108,7 +108,7 @@ export default function PesananPage() {
 
       <div className="mt-8 mx-auto max-w-4xl">
         <div className="rounded-md border border-[var(--color-muted)] p-4 bg-[var(--background)]">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
             <Input
               label="Nomor Invoice"
               name="invoice"
@@ -117,7 +117,7 @@ export default function PesananPage() {
               onChange={(e) => setQuery(e.target.value)}
               icon={<Search size={18} />}
             />
-            <div className="md:w-40">
+            <div className="mb-4 w-28 md:w-40">
               <Button text="Cari" type="button" variant="primary" onClick={search} disabled={loading} />
             </div>
           </div>

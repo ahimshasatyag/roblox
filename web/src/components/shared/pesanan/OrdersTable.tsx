@@ -31,14 +31,15 @@ export default function OrdersTable({ orders, formatCurrency, statusText, status
         </thead>
         <tbody>
           {orders.map((o, index) => (
-            <tr key={o.id} className="even:bg-[var(--background)]/40">
+            <tr 
+              key={o.id} 
+              className="even:bg-[var(--background)]/40 hover:bg-[var(--foreground)]/5 cursor-pointer transition-colors group"
+              onClick={() => onViewDetail?.(o)}
+            >
               <td className="px-4 py-3 text-sm text-[var(--foreground)] border-b border-[var(--color-muted)]">
-                <button 
-                  onClick={() => onViewDetail?.(o)}
-                  className="text-[var(--color-primary)] hover:underline font-medium"
-                >
+                <span className="text-[var(--color-primary)] font-medium group-hover:underline">
                   {index + 1}
-                </button>
+                </span>
               </td>
               <td className="px-4 py-3 text-sm text-[var(--foreground)] border-b border-[var(--color-muted)]">
                 {o.invoice || "-"}

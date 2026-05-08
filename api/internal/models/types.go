@@ -223,3 +223,12 @@ type UpdatePembayaranRequest struct {
 	ParentPaymentMethodID *uint64 `json:"parent_payment_method_id"`
 	NamaPembayaran        *string `json:"nama_pembayaran"`
 }
+
+type MenuAdmin struct {
+	IDMenu   string  `db:"id_menu" json:"id_menu"`
+	NmMenu   string  `db:"nm_menu" json:"nm_menu"`
+	IDParent string  `db:"id_parent" json:"id_parent"`
+	NoUrut   int     `db:"no_urut" json:"no_urut"`
+	NmFolder string  `db:"nm_folder" json:"nm_folder"`
+	NmIcon   *string `db:"nm_icon" json:"nm_icon"`
+}
