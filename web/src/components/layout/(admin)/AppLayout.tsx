@@ -80,9 +80,9 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
                         {isSidebarOpen && (
                             <Link href="/admin/dashboard" className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
                                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-0 transition-transform">
-                                    <span className="text-slate-900 font-black text-xl italic">S</span>
+                                    <span className="text-slate-900 font-black text-xl italic">R</span>
                                 </div>
-                                <h2 className="text-2xl font-black tracking-tighter uppercase italic">ShopMe</h2>
+                                <h2 className="text-2xl font-black tracking-tighter uppercase italic">ROBLOX</h2>
                             </Link>
                         )}
                         <button
@@ -108,7 +108,7 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
                     {/* Navigation Links */}
                     <nav className={`flex-1 px-4 py-4 scrollbar-hide ${isSidebarOpen ? "overflow-y-auto" : "overflow-visible"}`}>
                         <div className={`mb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ${!isSidebarOpen && "text-center"}`}>
-                            {isSidebarOpen ? "Main Console" : "•••"}
+                            {isSidebarOpen ? "MENU" : "•••"}
                         </div>
 
                         {menus.length > 0 && (
