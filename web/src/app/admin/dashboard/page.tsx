@@ -1,252 +1,83 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { 
   User, 
   Package, 
-  Briefcase, 
-  Menu, 
-  X, 
-  ChevronDown, 
-  ChevronRight,
-  LayoutDashboard,
-  Search
+  Briefcase
 } from "lucide-react"
-import { applyTheme, themeColors } from "@/helper/theme"
-import { http } from "@/lib/http"
-import { useAdminAuth } from "@/stores/(admin)/auth/index"
-import { useRouter } from "next/navigation"
-import { MenuAdmin } from "@/types/(admin)/auth/index"
-import { adminAuthService } from "@/services/(admin)/auth/auth"
-
+import AdminAppLayout from "@/components/layout/(admin)/AppLayout"
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const { token, userName } = useAdminAuth()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [menus, setMenus] = useState<MenuAdmin[]>([])
-  const [loading, setLoading] = useState(true)
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    applyTheme(themeColors)
-    
-    // Tunggu token dimuat dari cookie/store
-    if (token) {
-      fetchMenus()
-    } else if (typeof document !== "undefined" && !document.cookie.includes("admin_accessToken")) {
-      // Jika token null dan cookie tidak ada, langsung ke login
-      router.push("/admin/auth")
-    }
-  }, [token])
-
-  const fetchMenus = async () => {
-    try {
-      const res = await adminAuthService.getMenus()
-      setMenus(res.menus)
-      
-      // Auto-expand parent menus
-      const initialExpanded: Record<string, boolean> = {}
-      res.menus.forEach(m => {
-        if (m.id_parent === "0") initialExpanded[m.id_menu] = true
-      })
-      setExpandedMenus(initialExpanded)
-    } catch (e: any) {
-      console.error("Failed to fetch menus:", e)
-      if (e.message.includes("unauthorized") || e.message.includes("401") || e.message.includes("forbidden") || e.message.includes("403")) {
-        router.push("/admin/auth")
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
-  
-  const toggleExpand = (id: string) => {
-    setExpandedMenus(prev => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  // Build hierarchical menu
-  const rootMenus = menus.filter(m => m.id_parent === "0").sort((a, b) => a.no_urut - b.no_urut)
-  const getChildren = (parentId: string) => menus.filter(m => m.id_parent === parentId).sort((a, b) => a.no_urut - b.no_urut)
-
   return (
-    <div className="min-h-screen bg-[var(--background)] flex overflow-hidden font-['Lato',_sans-serif]">
-      {/* FontAwesome for Database Icons */}
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <link href="https://fonts.googleapis.com/css?family=Lato:300,400,400i,700" rel="stylesheet" />
+    <AdminAppLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Banner Area */}
+        <div className="mb-16">
+          <h1 className="text-6xl font-black text-[var(--foreground)] mb-4 tracking-tighter italic">Welcome back, Admin 😎</h1>
+          <p className="text-2xl text-[var(--foreground)]/40 font-medium tracking-tight">System analysis and operations are stable.</p>
+        </div>
 
-      {/* SIDEBAR */}
-      <aside 
-        className={`fixed left-0 top-0 h-full z-50 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white transition-all duration-300 ease-in-out shadow-2xl ${isSidebarOpen ? "w-[300px]" : "w-[92px]"}`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between px-6 py-8 h-20 mb-8">
-            {isSidebarOpen && (
-              <h3 className="text-2xl font-bold tracking-tight animate-in fade-in slide-in-from-left-4 duration-500">ShopMe Admin</h3>
-            )}
-            <button 
-              onClick={toggleSidebar}
-              className="p-2 bg-white rounded-full text-[var(--color-primary)] hover:scale-110 transition-transform shadow-lg"
-              aria-label="Toggle Sidebar"
-            >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+        {/* Overview Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* Products Card */}
+          <div className="bg-[var(--background)] p-10 rounded-[40px] shadow-sm border border-[var(--color-muted)]/10 transform hover:-translate-y-2 transition-all duration-300 group">
+            <div className="flex items-center justify-between mb-10">
+              <div className="w-16 h-16 bg-[var(--color-primary)] rounded-2xl flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-500 shadow-[0_10px_20px_rgba(166,3,17,0.3)]">
+                <Package size={32} />
+              </div>
+              <span className="text-4xl font-black text-[var(--foreground)] italic">124</span>
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--foreground)]/30">Total Live Products</h3>
           </div>
 
-          {/* User Profile */}
-          {isSidebarOpen && (
-            <div className="flex flex-col items-center mb-12 animate-in fade-in zoom-in duration-500">
-              <div className="w-24 h-24 rounded-full border-4 border-white/30 overflow-hidden mb-4 bg-white/20 flex items-center justify-center shadow-inner group">
-                <User size={48} className="text-white/80 group-hover:scale-110 transition-transform" />
+          {/* Users Card */}
+          <div className="bg-[var(--background)] p-10 rounded-[40px] shadow-sm border border-[var(--color-muted)]/10 transform hover:-translate-y-2 transition-all duration-300 group">
+            <div className="flex items-center justify-between mb-10">
+              <div className="w-16 h-16 bg-[var(--color-secondary)] rounded-2xl flex items-center justify-center text-white group-hover:-rotate-12 transition-transform duration-500 shadow-[0_10px_20px_rgba(115,2,12,0.3)]">
+                <User size={32} />
               </div>
-              <h3 className="text-sm font-semibold tracking-wider opacity-90 uppercase">{userName || "Admin"}</h3>
+              <span className="text-4xl font-black text-[var(--foreground)] italic">8.2K</span>
             </div>
-          )}
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--foreground)]/30">Active Platform Users</h3>
+          </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-4 scrollbar-hide">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-10 space-y-4 opacity-50">
-                <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span className="text-xs uppercase tracking-widest">Loading Menus...</span>
+          {/* Orders Card */}
+          <div className="bg-[var(--background)] p-10 rounded-[40px] shadow-sm border border-[var(--color-muted)]/10 transform hover:-translate-y-2 transition-all duration-300 group">
+            <div className="flex items-center justify-between mb-10">
+              <div className="w-16 h-16 bg-[var(--color-accent)] rounded-2xl flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-500 shadow-[0_10px_20px_rgba(140,3,3,0.3)]">
+                <Briefcase size={32} />
               </div>
-            ) : (
-              <ul className="space-y-2">
-                {rootMenus.map(menu => {
-                  const children = getChildren(menu.id_menu)
-                  const hasChildren = children.length > 0
-                  const isOpen = expandedMenus[menu.id_menu]
-                  const isActive = menu.id_menu === "101" // Dashboard active by default
-
-                  return (
-                    <li key={menu.id_menu} className="group/item">
-                      <div 
-                        onClick={() => hasChildren ? toggleExpand(menu.id_menu) : null}
-                        className={`
-                          flex items-center p-3 rounded-md cursor-pointer transition-all duration-200
-                          ${isActive ? "border-l-4 border-white bg-white/10 shadow-sm" : "hover:bg-white/5 hover:translate-x-1"}
-                          ${!isSidebarOpen && "justify-center px-0"}
-                        `}
-                      >
-                        <div className="w-10 flex justify-center">
-                          <i className={`${menu.nm_icon || "fas fa-circle"} text-2xl drop-shadow-md`}></i>
-                        </div>
-                        
-                        {isSidebarOpen && (
-                          <div className="flex-1 flex items-center justify-between ml-4">
-                            <span className="text-lg font-semibold tracking-wide">{menu.nm_menu}</span>
-                            {hasChildren && (
-                              <div className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
-                                <ChevronDown size={16} className="opacity-60" />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Submenus */}
-                      {isSidebarOpen && hasChildren && isOpen && (
-                        <ul className="mt-2 ml-12 space-y-1 animate-in slide-in-from-top-2 duration-300">
-                          {children.map(child => (
-                            <li key={child.id_menu}>
-                              <a 
-                                href={`/admin/${child.nm_folder}`}
-                                className="block py-2 px-3 text-base opacity-75 hover:opacity-100 hover:text-white hover:translate-x-1 transition-all rounded-md"
-                              >
-                                {child.nm_menu}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </nav>
-
-          {/* Footer */}
-          {isSidebarOpen && (
-            <footer className="p-6 text-center text-[10px] opacity-60 font-light italic">
-              &copy; {new Date().getFullYear()} ShopMe Admin Panel
-            </footer>
-          )}
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT */}
-      <main 
-        className={`flex-1 transition-all duration-300 ease-in-out min-h-screen ${isSidebarOpen ? "ml-[300px]" : "ml-[92px]"}`}
-      >
-        {/* Banner Header Area */}
-        <div className="bg-[var(--background)] h-[275px] pt-24 pl-24 pr-12 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="max-w-6xl">
-            <h1 className="text-5xl font-bold text-[var(--foreground)] mb-3 tracking-tight">Welcome back, Admin 😎</h1>
-            <p className="text-xl text-[var(--foreground)]/60 font-light italic opacity-80">Here's what's happening with ShopMe today.</p>
+              <span className="text-4xl font-black text-[var(--foreground)] italic">42</span>
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-[var(--foreground)]/30">Incoming Orders Today</h3>
           </div>
         </div>
 
-        {/* Overview Dashboard Cards */}
-        <div className="px-24 -mt-20 pb-20">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl">
-            {/* Products Card */}
-            <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] p-10 rounded-[30px] text-white shadow-2xl transform hover:-translate-y-3 transition-all duration-300 group cursor-default">
-              <h2 className="text-xl font-bold uppercase tracking-widest mb-10 opacity-80 group-hover:opacity-100 transition-opacity">Total Products</h2>
-              <div className="flex items-center justify-between">
-                <div className="p-4 bg-white/10 rounded-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                  <Package size={60} className="text-white" />
-                </div>
-                <div className="text-7xl font-bold tracking-tighter animate-in zoom-in duration-1000">124</div>
+        {/* Analytics Section */}
+        <div className="mt-16 bg-gradient-to-br from-[var(--color-dark)] to-[var(--color-secondary)] rounded-[50px] p-16 text-white overflow-hidden relative group shadow-2xl">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-12">
+              <div>
+                <h3 className="text-3xl font-black italic mb-2 uppercase tracking-tighter">Live Traffic Monitor</h3>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[0.4em]">Real-time statistics pipeline active</p>
+              </div>
+              <div className="flex gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-ping"></div>
+                <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
               </div>
             </div>
-
-            {/* Users Card */}
-            <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] p-10 rounded-[30px] text-white shadow-2xl transform hover:-translate-y-3 transition-all duration-300 group cursor-default">
-              <h2 className="text-xl font-bold uppercase tracking-widest mb-10 opacity-80 group-hover:opacity-100 transition-opacity">Active Users</h2>
-              <div className="flex items-center justify-between">
-                <div className="p-4 bg-white/10 rounded-2xl group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500">
-                  <User size={60} className="text-white" />
+            
+            <div className="grid grid-cols-4 gap-8">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-40 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-center">
+                  <div className="w-12 h-1 border-b border-white/20 animate-pulse"></div>
                 </div>
-                <div className="text-7xl font-bold tracking-tighter animate-in zoom-in duration-1000">8.2k</div>
-              </div>
-            </div>
-
-            {/* Orders Card */}
-            <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] p-10 rounded-[30px] text-white shadow-2xl transform hover:-translate-y-3 transition-all duration-300 group cursor-default">
-              <h2 className="text-xl font-bold uppercase tracking-widest mb-10 opacity-80 group-hover:opacity-100 transition-opacity">New Orders</h2>
-              <div className="flex items-center justify-between">
-                <div className="p-4 bg-white/10 rounded-2xl group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
-                  <Briefcase size={60} className="text-white" />
-                </div>
-                <div className="text-7xl font-bold tracking-tighter animate-in zoom-in duration-1000">42</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Info / Recent Activity Placeholder */}
-          <div className="mt-16 bg-white rounded-[30px] p-12 shadow-lg border border-gray-100 animate-in fade-in duration-1000">
-            <h3 className="text-2xl font-bold text-[var(--foreground)] mb-6">Dashboard Analytics</h3>
-            <div className="h-64 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 space-y-4">
-              <LayoutDashboard size={48} className="opacity-20" />
-              <p className="text-sm uppercase tracking-widest font-semibold">Real-time charts and metrics will appear here</p>
+              ))}
             </div>
           </div>
         </div>
-      </main>
-
-      <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-    </div>
+      </div>
+    </AdminAppLayout>
   )
 }

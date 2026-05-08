@@ -29,7 +29,6 @@ export function setAccessTokenCookie(token: string, scope?: "admin" | "client", 
 export function clearAccessTokenCookie(scope: "admin" | "client") {
   if (typeof document === "undefined") return
   const name = scope === "admin" ? ADMIN_COOKIE : CLIENT_COOKIE
-  console.log(`[HTTP] Clearing cookie: ${name}`)
   document.cookie = `${name}=; path=/; max-age=0; samesite=lax`
 }
 
