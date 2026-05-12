@@ -36,23 +36,37 @@ export async function http<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const inputHeaders = (options.headers as Record<string, string> | undefined) || {}
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> | undefined),
+    ...inputHeaders,
   }
+
+  if (inputHeaders["Content-Type"] === "unset") {
+    delete headers["Content-Type"]
+  }
+
+  // Auto-attach Authorization header if token exists
   if (!headers["Authorization"]) {
-    const isAdmin = path.startsWith("/admin")
-    const cookieName = isAdmin ? ADMIN_COOKIE : CLIENT_COOKIE
-    const token = getCookie(cookieName)
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`
+    const adminToken = getCookie(ADMIN_COOKIE)
+    const clientToken = getCookie(CLIENT_COOKIE)
+    
+    // Priority: use admin token for /admin paths, otherwise fallback to whichever exists
+    if (path.startsWith("/admin") && adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`
+    } else if (path.startsWith("/client") && clientToken) {
+      headers["Authorization"] = `Bearer ${clientToken}`
+    } else if (adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`
+    } else if (clientToken) {
+      headers["Authorization"] = `Bearer ${clientToken}`
     }
   }
+  const { headers: _unused, ...remainingOptions } = options
+
   const res = await fetch(`${API_URL}${path}`, {
-    headers: {
-      ...headers,
-    },
-    ...options,
+    ...remainingOptions,
+    headers,
     credentials: "include",
   })
   if (!res.ok) {

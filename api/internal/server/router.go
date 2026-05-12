@@ -50,6 +50,7 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	r.Use(cors())
 	r.GET("/health", func(c *gin.Context) { c.String(200, "ok") })
 	r.Static("/uploads/avatars", "./uploads/avatars")
+	r.Static("/uploads/products", "./uploads/products")
 	admin := &handlers.AdminHandler{DB: db, Secret: secret}
 	client := &handlers.ClientHandler{DB: db, Secret: secret}
 
@@ -69,7 +70,13 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	ag.Use(middleware.Auth(secret), middleware.Scope("admin"))
 	ag.GET("/me", admin.Me)
 	ag.GET("/products", admin.ListProducts)
+	ag.GET("/products/:id", admin.GetProduct)
 	ag.POST("/products", admin.CreateProduct)
+	ag.POST("/products/upload", admin.UploadProductImage)
+	ag.GET("/product-items", admin.ListProductItems)
+	ag.POST("/product-items", admin.CreateProductItem)
+	ag.PUT("/product-items/:id", admin.UpdateProductItem)
+	ag.DELETE("/product-items/:id", admin.DeleteProductItem)
 	ag.PUT("/products/:id", admin.UpdateProduct)
 	ag.DELETE("/products/:id", admin.DeleteProduct)
 	ag.GET("/robuxes", admin.ListRobuxes)
@@ -93,6 +100,12 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	ag.PUT("/pembayaran/:id", admin.UpdatePembayaran)
 	ag.DELETE("/pembayaran/:id", admin.DeletePembayaran)
 	ag.GET("/menus", admin.ListMenus)
+	ag.GET("/users", admin.ListUsers)
+	ag.GET("/users/:id", admin.GetUser)
+	ag.POST("/users", admin.Register)
+	ag.PUT("/users/:id", admin.UpdateUser)
+	ag.DELETE("/users/:id", admin.DeleteUser)
+	ag.GET("/roles", admin.ListRoles)
 
 	cg := r.Group("/client")
 	cg.Use(middleware.Auth(secret), middleware.Scope("client"))

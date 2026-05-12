@@ -20,10 +20,35 @@ import Link from "next/link"
 export default function AdminAppLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
-    const { token, userName } = useAdminAuth()
+    const { token, userName, menus, setMenus, expandedMenus, setExpandedMenus } = useAdminAuth()
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-    const [menus, setMenus] = useState<MenuAdmin[]>([])
-    const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({})
+
+    // Auto-expand parent if child is active & close others
+    useEffect(() => {
+        if (menus.length > 0) {
+            const newExpanded: Record<string, boolean> = {}
+
+            menus.forEach(menu => {
+                const children = menus.filter(m => m.id_parent === menu.id_menu)
+                const isChildActive = children.some(c => {
+                    const childPath = `/admin/${c.nm_folder}`
+                    return pathname.startsWith(childPath)
+                })
+                
+                if (isChildActive) {
+                    newExpanded[menu.id_menu] = true
+                }
+            })
+
+            // Check if state actually needs updating
+            const isDifferent = Object.keys(newExpanded).length !== Object.keys(expandedMenus).length ||
+                Object.keys(newExpanded).some(k => newExpanded[k] !== expandedMenus[k])
+
+            if (isDifferent) {
+                setExpandedMenus(newExpanded)
+            }
+        }
+    }, [pathname, menus])
 
     useEffect(() => {
         applyTheme(themeColors)
@@ -45,8 +70,6 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
             const res = await adminAuthService.getMenus()
             setMenus(res.menus)
 
-            // Initialize all dropdowns as closed by default
-            setExpandedMenus({})
         } catch (err) {
             console.error("Failed to fetch menus:", err)
         }
@@ -54,7 +77,15 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
     const toggleExpand = (id: string) => {
-        setExpandedMenus(prev => ({ ...prev, [id]: !prev[id] }))
+        setExpandedMenus(prev => {
+            const isOpen = !!prev[id]
+            // Accordion behavior: close all others when opening a new one
+            if (!isOpen) {
+                return { [id]: true }
+            }
+            // If clicking the one that's already open, close it
+            return {}
+        })
     }
 
     const handleLogout = async () => {
@@ -118,14 +149,20 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
                                     const hasChildren = children.length > 0
                                     const isOpen = expandedMenus[menu.id_menu]
 
-                                    // Perbaikan deteksi active state: Hanya fallback ke 'dashboard' jika memang menu Dashboard
-                                    const isDashboardMenu = menu.nm_menu.toLowerCase().includes("dashboard")
+                                    // Perbaikan deteksi active state: Fallback ke folder yang sesuai jika nm_folder kosong/#
+                                    const nmMenuLower = menu.nm_menu.toLowerCase()
+                                    const isDashboardMenu = nmMenuLower.includes("dashboard")
+                                    const isUsersMenu = (nmMenuLower.includes("users") || nmMenuLower.includes("pengguna")) && !nmMenuLower.includes("role")
+                                    const isUserRolesMenu = nmMenuLower.includes("role") || nmMenuLower.includes("level")
+                                    const isRobuxMenu = nmMenuLower.includes("robux")
+                                    const isProductsMenu = nmMenuLower.includes("products") || nmMenuLower.includes("produk")
+
                                     const folder = (menu.nm_folder && menu.nm_folder !== "" && menu.nm_folder !== "#")
                                         ? menu.nm_folder
-                                        : (isDashboardMenu ? "dashboard" : menu.nm_folder)
+                                        : (isDashboardMenu ? "dashboard" : (isUserRolesMenu ? "userroles" : (isUsersMenu ? "users" : (isRobuxMenu ? "robux" : (isProductsMenu ? "products" : menu.nm_folder)))))
 
                                     const menuPath = `/admin/${folder}`
-                                    const isActive = pathname === menuPath || (hasChildren && children.some(c => pathname === `/admin/${c.nm_folder}`))
+                                    const isActive = pathname.startsWith(menuPath) || (hasChildren && children.some(c => pathname.startsWith(`/admin/${c.nm_folder}`)))
 
                                     return (
                                         <li key={menu.id_menu} className="group/item relative">
@@ -170,7 +207,7 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
                                                     <ul className="ml-10 space-y-1">
                                                         {children.map(child => {
                                                             const childPath = `/admin/${child.nm_folder}`
-                                                            const isChildActive = pathname === childPath
+                                                            const isChildActive = pathname.startsWith(childPath)
                                                             return (
                                                                 <li key={child.id_menu}>
                                                                     <Link
@@ -271,7 +308,7 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
 
                 {/* Global Footer */}
                 <footer className="px-12 py-8 text-center text-[10px] font-black uppercase tracking-[0.5em] text-[var(--foreground)]/20 border-t border-[var(--color-muted)]/10">
-                    &copy; {new Date().getFullYear()} ShopMe Multi-Tenant Platform / All Rights Reserved
+                    &copy; {new Date().getFullYear()} All Rights Reserved
                 </footer>
             </main>
 

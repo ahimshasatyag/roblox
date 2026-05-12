@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useState, useEffect } from "react"
 import { setAccessTokenCookie } from "@/lib/http"
 import { adminAuthService } from "@/services/(admin)/auth/auth"
+import { MenuAdmin } from "@/types/(admin)/auth/index"
 
 type AdminAuthState = {
     token: string | null
@@ -11,6 +12,10 @@ type AdminAuthState = {
     userEmail: string | null
     setUserName: (v: string | null) => void
     setUserEmail: (v: string | null) => void
+    menus: MenuAdmin[]
+    setMenus: (m: MenuAdmin[]) => void
+    expandedMenus: Record<string, boolean>
+    setExpandedMenus: (v: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
 }
 
 const AdminAuthContext = createContext<AdminAuthState>({
@@ -20,12 +25,18 @@ const AdminAuthContext = createContext<AdminAuthState>({
     userEmail: null,
     setUserName: () => { },
     setUserEmail: () => { },
+    menus: [],
+    setMenus: () => { },
+    expandedMenus: {},
+    setExpandedMenus: () => { },
 })
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setTokenState] = useState<string | null>(null)
     const [userName, setUserName] = useState<string | null>(null)
     const [userEmail, setUserEmail] = useState<string | null>(null)
+    const [menus, setMenus] = useState<MenuAdmin[]>([])
+    const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({})
 
     useEffect(() => {
         // Khusus admin_accessToken
@@ -70,8 +81,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const value = useMemo(
-        () => ({ token, setToken, userName, userEmail, setUserName, setUserEmail }),
-        [token, userName, userEmail]
+        () => ({
+            token, setToken,
+            userName, userEmail,
+            setUserName, setUserEmail,
+            menus, setMenus,
+            expandedMenus, setExpandedMenus
+        }),
+        [token, userName, userEmail, menus, expandedMenus]
     )
 
     return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>

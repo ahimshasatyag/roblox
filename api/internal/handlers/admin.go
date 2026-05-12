@@ -4,7 +4,10 @@ import (
 	"api/internal/auth"
 	"api/internal/models"
 	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +16,31 @@ import (
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func (h *AdminHandler) UploadProductImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_required"})
+		return
+	}
+
+	ext := filepath.Ext(file.Filename)
+	if ext == "" {
+		ext = ".png"
+	}
+	filename := fmt.Sprintf("product_%d%s", time.Now().UnixNano(), ext)
+	dir := filepath.Join("uploads", "products")
+	_ = os.MkdirAll(dir, 0755)
+	dst := filepath.Join(dir, filename)
+
+	if err := c.SaveUploadedFile(file, dst); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "upload_failed"})
+		return
+	}
+
+	publicPath := filepath.ToSlash(filepath.Join("/uploads/products", filename))
+	c.JSON(http.StatusOK, gin.H{"url": publicPath})
+}
 
 type AdminHandler struct {
 	DB     *sqlx.DB
@@ -105,6 +133,25 @@ func (h *AdminHandler) ListProducts(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"products": items})
+}
+
+func (h *AdminHandler) GetProduct(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	var p models.Product
+	if err := h.DB.Get(&p, "SELECT id, name, starting_price, image_url, created_at, updated_at FROM products WHERE id = ?", id); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product_not_found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"product": p})
 }
 
 func (h *AdminHandler) CreateProduct(c *gin.Context) {
@@ -688,4 +735,209 @@ func (h *AdminHandler) ListMenus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"menus": items})
+}
+
+func (h *AdminHandler) ListUsers(c *gin.Context) {
+	var items []models.User
+	err := h.DB.Select(&items, "SELECT id, role_id, fullname, username, created_at, email FROM users ORDER BY id DESC")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"users": items})
+}
+
+func (h *AdminHandler) GetUser(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	var user models.User
+	err = h.DB.Get(&user, "SELECT id, role_id, fullname, username, created_at, email FROM users WHERE id = ?", id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user_not_found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func (h *AdminHandler) UpdateUser(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	var req models.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	sets := []string{}
+	args := []interface{}{}
+	if req.RoleID != nil {
+		sets = append(sets, "role_id = ?")
+		args = append(args, *req.RoleID)
+	}
+	if req.Fullname != nil {
+		sets = append(sets, "fullname = ?")
+		args = append(args, *req.Fullname)
+	}
+	if req.Username != nil {
+		sets = append(sets, "username = ?")
+		args = append(args, *req.Username)
+	}
+	if req.Email != nil {
+		sets = append(sets, "email = ?")
+		args = append(args, *req.Email)
+	}
+	if req.Password != nil && *req.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+			return
+		}
+		sets = append(sets, "password = ?")
+		args = append(args, string(hashed))
+	}
+	if len(sets) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nothing_to_update"})
+		return
+	}
+	q := "UPDATE users SET " + strings.Join(sets, ", ") + " WHERE id = ?"
+	args = append(args, id)
+	if _, err := h.DB.Exec(q, args...); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error", "details": err.Error()})
+		return
+	}
+	var user models.User
+	if err := h.DB.Get(&user, "SELECT id, role_id, fullname, username, created_at, email FROM users WHERE id = ?", id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func (h *AdminHandler) DeleteUser(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	if _, err := h.DB.Exec("DELETE FROM users WHERE id = ?", id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *AdminHandler) ListRoles(c *gin.Context) {
+	var items []models.UserRole
+	err := h.DB.Select(&items, "SELECT id, role_name FROM user_roles ORDER BY id ASC")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"roles": items})
+}
+
+func (h *AdminHandler) ListProductItems(c *gin.Context) {
+	productID := c.Query("id_product")
+	var items []models.ProductItem
+	var err error
+	if productID != "" {
+		err = h.DB.Select(&items, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items WHERE id_product = ? ORDER BY id ASC", productID)
+	} else {
+		err = h.DB.Select(&items, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items ORDER BY id ASC")
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"product_items": items})
+}
+
+func (h *AdminHandler) CreateProductItem(c *gin.Context) {
+	var req models.CreateProductItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	res, err := h.DB.Exec(
+		"INSERT INTO product_items (id_product, name, price, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
+		req.IDProduct, req.Name, req.Price,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error"})
+		return
+	}
+	id, _ := res.LastInsertId()
+	var item models.ProductItem
+	if err := h.DB.Get(&item, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items WHERE id = ?", id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"product_item": item})
+}
+
+func (h *AdminHandler) UpdateProductItem(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	var req models.UpdateProductItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	sets := []string{}
+	args := []interface{}{}
+	if req.Name != nil {
+		sets = append(sets, "name = ?")
+		args = append(args, *req.Name)
+	}
+	if req.Price != nil {
+		sets = append(sets, "price = ?")
+		args = append(args, *req.Price)
+	}
+	if len(sets) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nothing_to_update"})
+		return
+	}
+	sets = append(sets, "updated_at = NOW()")
+	q := "UPDATE product_items SET " + strings.Join(sets, ", ") + " WHERE id = ?"
+	args = append(args, id)
+	if _, err := h.DB.Exec(q, args...); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error"})
+		return
+	}
+	var item models.ProductItem
+	if err := h.DB.Get(&item, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items WHERE id = ?", id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"product_item": item})
+}
+
+func (h *AdminHandler) DeleteProductItem(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	if _, err := h.DB.Exec("DELETE FROM product_items WHERE id = ?", id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

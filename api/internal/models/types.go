@@ -36,6 +36,14 @@ type AdminLoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type UpdateUserRequest struct {
+	RoleID   *int    `json:"role_id"`
+	Fullname *string `json:"fullname"`
+	Username *string `json:"username"`
+	Password *string `json:"password"`
+	Email    *string `json:"email"`
+}
+
 type ClientRegisterRequest struct {
 	FullName string  `json:"full_name" binding:"required"`
 	Email    string  `json:"email" binding:"required"`
@@ -231,4 +239,29 @@ type MenuAdmin struct {
 	NoUrut   int     `db:"no_urut" json:"no_urut"`
 	NmFolder string  `db:"nm_folder" json:"nm_folder"`
 	NmIcon   *string `db:"nm_icon" json:"nm_icon"`
+}
+
+type UserRole struct {
+	ID       int    `db:"id" json:"id"`
+	RoleName string `db:"role_name" json:"role_name"`
+}
+
+type ProductItem struct {
+	ID        uint64     `db:"id" json:"id"`
+	IDProduct uint64     `db:"id_product" json:"id_product"`
+	Name      string     `db:"name" json:"name"`
+	Price     float64    `db:"price" json:"price"`
+	CreatedAt *time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt *time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type CreateProductItemRequest struct {
+	IDProduct uint64  `json:"id_product" binding:"required"`
+	Name      string  `json:"name" binding:"required"`
+	Price     float64 `json:"price" binding:"required"`
+}
+
+type UpdateProductItemRequest struct {
+	Name  *string  `json:"name"`
+	Price *float64 `json:"price"`
 }
