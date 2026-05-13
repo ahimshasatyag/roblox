@@ -9,8 +9,10 @@ type AdminAuthState = {
     token: string | null
     setToken: (t: string | null) => void
     userName: string | null
+    username: string | null
     userEmail: string | null
     setUserName: (v: string | null) => void
+    setUsername: (v: string | null) => void
     setUserEmail: (v: string | null) => void
     menus: MenuAdmin[]
     setMenus: (m: MenuAdmin[]) => void
@@ -22,8 +24,10 @@ const AdminAuthContext = createContext<AdminAuthState>({
     token: null,
     setToken: () => { },
     userName: null,
+    username: null,
     userEmail: null,
     setUserName: () => { },
+    setUsername: () => { },
     setUserEmail: () => { },
     menus: [],
     setMenus: () => { },
@@ -34,6 +38,7 @@ const AdminAuthContext = createContext<AdminAuthState>({
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setTokenState] = useState<string | null>(null)
     const [userName, setUserName] = useState<string | null>(null)
+    const [username, setUsername] = useState<string | null>(null)
     const [userEmail, setUserEmail] = useState<string | null>(null)
     const [menus, setMenus] = useState<MenuAdmin[]>([])
     const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({})
@@ -55,6 +60,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
             if (res.user) {
                 setUserName(res.user.fullname)
+                setUsername(res.user.username)
                 setUserEmail(res.user.email)
             }
         } catch (e: any) {
@@ -76,6 +82,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
             console.log("[AdminAuth] Logging out admin...")
             adminAuthService.logout()
             setUserName(null)
+            setUsername(null)
             setUserEmail(null)
         }
     }
@@ -83,12 +90,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     const value = useMemo(
         () => ({
             token, setToken,
-            userName, userEmail,
-            setUserName, setUserEmail,
+            userName, username, userEmail,
+            setUserName, setUsername, setUserEmail,
             menus, setMenus,
             expandedMenus, setExpandedMenus
         }),
-        [token, userName, userEmail, menus, expandedMenus]
+        [token, userName, username, userEmail, menus, expandedMenus]
     )
 
     return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>

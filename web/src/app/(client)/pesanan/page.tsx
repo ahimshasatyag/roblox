@@ -165,7 +165,11 @@ export default function PesananPage() {
                 }`}>
                 {selectedOrder.status === "success" ? <CheckCircle2 size={32} /> : <Clock size={32} />}
               </div>
-              <h2 className="text-xl font-bold text-[var(--foreground)]">{selectedOrder.name}</h2>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">
+                {selectedOrder.robuxesId || selectedOrder.name?.toLowerCase().includes('robux')
+                  ? `Top Up Robux`
+                  : `Product Item ${selectedOrder.name}`}
+              </h2>
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-sm text-[var(--foreground)]/60">Status:</span>
                 <Badge text={statusText(selectedOrder.status)} color={statusVariant(selectedOrder.status)} />
@@ -257,7 +261,7 @@ export default function PesananPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[var(--color-muted)] text-[var(--foreground)]/50 text-xs uppercase tracking-wider">
-                <th className="py-3 px-4 font-semibold">Robux</th>
+                <th className="py-3 px-4 font-semibold">Item</th>
                 <th className="py-3 px-4 font-semibold text-right">Harga</th>
                 <th className="py-3 px-4 font-semibold text-center">Qty</th>
                 <th className="py-3 px-4 font-semibold text-right">Total</th>

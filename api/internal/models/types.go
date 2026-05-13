@@ -133,15 +133,17 @@ type Order struct {
 	HeaderTotal    *float64   `db:"header_total" json:"header_total"`
 	RobloxUsername *string    `db:"roblox_username" json:"roblox_username"`
 	HeaderDate     *time.Time `db:"header_date" json:"header_date"`
+	IDProductItems *uint64    `db:"id_product_items" json:"id_product_items"`
 }
 
 type CreateOrderRequest struct {
-	OrderName     string  `json:"order_name" binding:"required"`
-	Quantity      int     `json:"quantity" binding:"required"`
-	Total         float64 `json:"total" binding:"required"`
-	Status        string  `json:"status" binding:"required"`
-	UserAccountID uint64  `json:"user_account_id" binding:"required"`
-	RobuxesID     *uint64 `json:"robuxes_id"`
+	OrderName      string  `json:"order_name" binding:"required"`
+	Quantity       int     `json:"quantity" binding:"required"`
+	Total          float64 `json:"total" binding:"required"`
+	Status         string  `json:"status" binding:"required"`
+	UserAccountID  uint64  `json:"user_account_id" binding:"required"`
+	RobuxesID      *uint64 `json:"robuxes_id"`
+	IDProductItems *uint64 `json:"id_product_items"`
 }
 
 type UpdateOrderRequest struct {
@@ -264,4 +266,13 @@ type CreateProductItemRequest struct {
 type UpdateProductItemRequest struct {
 	Name  *string  `json:"name"`
 	Price *float64 `json:"price"`
+}
+
+type CreateProductItemOrderRequest struct {
+	IDProductItem uint64 `json:"id_product_item" binding:"required"`
+	Quantity      int    `json:"quantity" binding:"required"`
+	Username      string `json:"username" binding:"required"`
+	Password      string `json:"password"`
+	Phone         string `json:"phone" binding:"required"`
+	Email         string `json:"email" binding:"required"`
 }

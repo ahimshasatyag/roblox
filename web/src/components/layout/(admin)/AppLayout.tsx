@@ -16,6 +16,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { MenuAdmin } from "@/types/(admin)/auth/index"
 import { adminAuthService } from "@/services/(admin)/auth/auth"
 import Link from "next/link"
+import NotificationDropdown from "@/components/ui/notification"
 
 export default function AdminAppLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
@@ -295,9 +296,7 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
                         <button className="w-10 h-10 rounded-full bg-[var(--foreground)]/5 flex items-center justify-center text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/10 transition-colors">
                             <i className="fas fa-search"></i>
                         </button>
-                        <button className="w-10 h-10 rounded-full bg-[var(--foreground)]/5 flex items-center justify-center text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/10 transition-colors">
-                            <i className="fas fa-bell"></i>
-                        </button>
+                        <NotificationDropdown />
                     </div>
                 </header>
 

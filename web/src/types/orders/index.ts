@@ -39,6 +39,7 @@ export type OrderDTO = {
   header_total?: number | null
   roblox_username?: string | null
   header_date?: string | null
+  id_product_items?: number | null
   header?: OrderHeaderDTO | null
 }
 
@@ -59,6 +60,7 @@ export type Order = {
   headerTotal?: number | null
   robloxUsername?: string | null
   headerDate?: string | null
+  idProductItems?: number | null
   header?: OrderHeader | null
 }
 
@@ -80,6 +82,7 @@ export function mapDTOToOrder(dto: OrderDTO): Order {
     headerTotal: dto.header_total,
     robloxUsername: dto.roblox_username,
     headerDate: dto.header_date,
+    idProductItems: dto.id_product_items,
     header: dto.header ? {
       id: dto.header.id,
       orderId: dto.header.order_id,

@@ -55,6 +55,8 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	client := &handlers.ClientHandler{DB: db, Secret: secret}
 
 	r.GET("/products", client.ListProducts)
+	r.GET("/products/:id", client.GetProduct)
+	r.GET("/product-items", client.ListProductItems)
 	r.GET("/robuxes", client.ListRobuxes)
 	r.GET("/payment_methods", client.ListPaymentMethods)
 	r.GET("/pembayaran", client.ListPembayaran)
@@ -106,6 +108,7 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	ag.PUT("/users/:id", admin.UpdateUser)
 	ag.DELETE("/users/:id", admin.DeleteUser)
 	ag.GET("/roles", admin.ListRoles)
+	ag.GET("/stats", admin.GetDashboardStats)
 
 	cg := r.Group("/client")
 	cg.Use(middleware.Auth(secret), middleware.Scope("client"))
@@ -115,6 +118,7 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	cg.PUT("/me/avatar", client.UploadAvatar)
 	cg.GET("/orders", client.ListMyOrders)
 	cg.POST("/orders", client.CreateOrder)
+	cg.POST("/orders/product-item", client.CreateProductItemOrder)
 	cg.PUT("/orders/:id", client.UpdateOrderQuantity)
 	cg.DELETE("/orders/:id", client.DeleteOrder)
 	cg.POST("/roblox_accounts", client.CreateRobloxAccount)

@@ -51,7 +51,10 @@ import { useAuthToken } from "@/hooks/use-auth"
           }
           const next = orders.map(o => {
             const amt = toNumber(o.name)
-            const price = amt ? priceMap.get(amt) ?? 0 : 0
+            let price = amt ? priceMap.get(amt) ?? 0 : 0
+            if (price === 0 && o.qty > 0) {
+              price = o.total / o.qty
+            }
             return { id: o.id, name: o.name, qty: o.qty, price, orderId: o.id }
           })
           setCartItems(next)

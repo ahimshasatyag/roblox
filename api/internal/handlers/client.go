@@ -32,6 +32,25 @@ func (h *ClientHandler) ListProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 
+func (h *ClientHandler) GetProduct(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id"})
+		return
+	}
+	var p models.Product
+	if err := h.DB.Get(&p, "SELECT id, name, starting_price, image_url, created_at, updated_at FROM products WHERE id = ?", id); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product_not_found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"product": p})
+}
+
 func (h *ClientHandler) ListRobuxes(c *gin.Context) {
 	var items []models.Robux
 	err := h.DB.Select(&items, "SELECT id, robux_amount, price, created_at, updated_at FROM robuxes ORDER BY id ASC")
@@ -281,7 +300,10 @@ func (h *ClientHandler) ListMyOrders(c *gin.Context) {
 				'draft' as status,
 				ra.username as roblox_username,
 				pm.metode_pembayaran as payment_method,
-				pm.akun as payment_account
+				pm.akun as payment_account,
+				o.id_product_items,
+				o.robuxes_id,
+				o.order_name
 			FROM orders o
 			LEFT JOIN order_headers oh ON o.order_header_id = oh.id
 			LEFT JOIN roblox_accounts ra ON o.id = ra.order_id
@@ -302,7 +324,9 @@ func (h *ClientHandler) ListMyOrders(c *gin.Context) {
 				COALESCE(o.order_name, 'Pesanan Robux') as order_name,
 				ra.username as roblox_username,
 				pm.metode_pembayaran as payment_method,
-				pm.akun as payment_account
+				pm.akun as payment_account,
+				o.id_product_items,
+				o.robuxes_id
 			FROM order_headers oh
 			LEFT JOIN orders o ON oh.order_id = o.id
 			LEFT JOIN roblox_accounts ra ON oh.roblox_account_id = ra.id
@@ -368,21 +392,32 @@ func (h *ClientHandler) UpdateOrderQuantity(c *gin.Context) {
 
 	// Recalculate total
 	var existingOrder models.Order
-	if err := h.DB.Unsafe().Get(&existingOrder, "SELECT order_name FROM orders WHERE id = ?", id64); err != nil {
+	if err := h.DB.Unsafe().Get(&existingOrder, "SELECT id, order_name, id_product_items, robuxes_id FROM orders WHERE id = ?", id64); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "order_not_found"})
 		return
 	}
 
-	var robuxes []models.Robux
-	if err := h.DB.Select(&robuxes, "SELECT robux_amount, price FROM robuxes"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch_prices_failed"})
-		return
-	}
 	var price float64
-	for _, r := range robuxes {
-		if fmt.Sprintf("Top Up Robux %d", r.RobuxAmount) == existingOrder.OrderName {
-			price = r.Price
-			break
+	if existingOrder.IDProductItems != nil {
+		// Fetch price from product_items
+		err := h.DB.Get(&price, "SELECT price FROM product_items WHERE id = ?", *existingOrder.IDProductItems)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch_item_price_failed"})
+			return
+		}
+	} else {
+		// Existing logic for Robux matching
+		var robuxes []models.Robux
+		if err := h.DB.Select(&robuxes, "SELECT id, robux_amount, price FROM robuxes"); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch_prices_failed"})
+			return
+		}
+		for _, r := range robuxes {
+			if (existingOrder.RobuxesID != nil && *existingOrder.RobuxesID == r.ID) || 
+			   fmt.Sprintf("Top Up Robux %d", r.RobuxAmount) == existingOrder.OrderName {
+				price = r.Price
+				break
+			}
 		}
 	}
 	newTotal := price * float64(req.Quantity)
@@ -526,11 +561,20 @@ func (h *ClientHandler) FinalizePayment(c *gin.Context) {
 	var firstRAID uint64
 
 	for i, o := range orders {
-		// Parse amount from name like "Top Up Robux 100"
-		var amt int
-		_, _ = fmt.Sscanf(o.OrderName, "Top Up Robux %d", &amt)
+		var price float64
+		if o.IDProductItems != nil {
+			err := h.DB.Get(&price, "SELECT price FROM product_items WHERE id = ?", *o.IDProductItems)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "fetch_item_price_failed"})
+				return
+			}
+		} else {
+			// Parse amount from name like "Top Up Robux %d"
+			var amt int
+			_, _ = fmt.Sscanf(o.OrderName, "Top Up Robux %d", &amt)
+			price = priceMap[amt]
+		}
 		
-		price := priceMap[amt]
 		itemTotal := price * float64(o.Quantity)
 
 		// Update order total and pembayaran_id
@@ -615,4 +659,83 @@ func (h *ClientHandler) GetOrderHeaderItems(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func (h *ClientHandler) ListProductItems(c *gin.Context) {
+	productID := c.Query("id_product")
+	var items []models.ProductItem
+	var err error
+	if productID != "" {
+		err = h.DB.Select(&items, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items WHERE id_product = ? ORDER BY id ASC", productID)
+	} else {
+		err = h.DB.Select(&items, "SELECT id, id_product, name, price, created_at, updated_at FROM product_items ORDER BY id ASC")
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"product_items": items})
+}
+
+func (h *ClientHandler) CreateProductItemOrder(c *gin.Context) {
+	v, _ := c.Get("claims")
+	claims := v.(*auth.Claims)
+
+	var req models.CreateProductItemOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+
+	// 1. Get product item details for price and name (parent product name)
+	var item struct {
+		models.ProductItem
+		ProductName string `db:"product_name"`
+	}
+	err := h.DB.Get(&item, `
+		SELECT pi.*, pr.name as product_name 
+		FROM product_items pi 
+		JOIN products pr ON pi.id_product = pr.id 
+		WHERE pi.id = ?`, req.IDProductItem)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "item_not_found"})
+		return
+	}
+
+	total := item.Price * float64(req.Quantity)
+
+	tx, err := h.DB.Beginx()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "tx_failed"})
+		return
+	}
+	defer tx.Rollback()
+
+	// 2. Create Order using ProductItem Name
+	res, err := tx.Exec(
+		"INSERT INTO orders (order_name, quantity, total, user_account_id, id_product_items) VALUES (?, ?, ?, ?, ?)",
+		item.Name, req.Quantity, total, claims.ID, req.IDProductItem,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create_order_failed", "details": err.Error()})
+		return
+	}
+	orderID, _ := res.LastInsertId()
+
+	// 3. Create Roblox Account
+	_, err = tx.Exec(
+		"INSERT INTO roblox_accounts (order_id, username, password, phone, email) VALUES (?, ?, ?, ?, ?)",
+		orderID, req.Username, req.Password, req.Phone, req.Email,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create_account_failed", "details": err.Error()})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit_failed"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"ok": true, "order_id": orderID})
 }

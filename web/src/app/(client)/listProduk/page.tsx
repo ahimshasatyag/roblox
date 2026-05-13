@@ -9,7 +9,7 @@
    const router = useRouter()
    const { query, setQuery, products, formatCurrency } = useListProduk()
   const handleBuy = (id: number) => {
-    router.push(`/cart?product=${id}`)
+    router.push(`/listProduk/vd?id=${id}`)
   }
    return (
      <div className="min-h-screen container mx-auto px-4 py-10">

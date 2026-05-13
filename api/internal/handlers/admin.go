@@ -941,3 +941,134 @@ func (h *AdminHandler) DeleteProductItem(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	filterStatus := c.Query("status")
+
+	if startDate == "" && endDate == "" {
+		// Default to last 7 days if no range is specified
+		startDate = time.Now().AddDate(0, 0, -7).Format("2006-01-02")
+	}
+
+	whereClauses := []string{"1=1"}
+	args := []interface{}{}
+
+	if startDate != "" {
+		whereClauses = append(whereClauses, "order_date >= ?")
+		args = append(args, startDate+" 00:00:00")
+	}
+	if endDate != "" {
+		whereClauses = append(whereClauses, "order_date <= ?")
+		args = append(args, endDate+" 23:59:59")
+	}
+	if filterStatus != "" {
+		if filterStatus == "belum_bayar" {
+			whereClauses = append(whereClauses, "(status = 'belum_bayar' OR status IS NULL)")
+		} else {
+			whereClauses = append(whereClauses, "status = ?")
+			args = append(args, filterStatus)
+		}
+	}
+
+	var orderItem int
+	var orderRobux int
+	var totalOrder int
+
+	// 1. Order Item Count
+	qItem := "SELECT COUNT(*) FROM orders"
+	if filterStatus != "" {
+		qItem += " JOIN order_headers oh_filter ON orders.order_header_id = oh_filter.id"
+	}
+	qItem += " WHERE id_product_items IS NOT NULL"
+	if startDate != "" || endDate != "" || filterStatus != "" {
+		qItem += " AND " + strings.Join(whereClauses, " AND ")
+	}
+	err := h.DB.Get(&orderItem, qItem, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error_item", "details": err.Error()})
+		return
+	}
+
+	// 2. Order Robux Count
+	qRobux := "SELECT COUNT(*) FROM orders"
+	if filterStatus != "" {
+		qRobux += " JOIN order_headers oh_filter ON orders.order_header_id = oh_filter.id"
+	}
+	qRobux += " WHERE robuxes_id IS NOT NULL"
+	if startDate != "" || endDate != "" || filterStatus != "" {
+		qRobux += " AND " + strings.Join(whereClauses, " AND ")
+	}
+	err = h.DB.Get(&orderRobux, qRobux, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error_robux", "details": err.Error()})
+		return
+	}
+
+	// 3. Total Order Count
+	qTotal := "SELECT COUNT(*) FROM orders"
+	if filterStatus != "" {
+		qTotal += " JOIN order_headers oh_filter ON orders.order_header_id = oh_filter.id"
+	}
+	if startDate != "" || endDate != "" || filterStatus != "" {
+		qTotal += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+	err = h.DB.Get(&totalOrder, qTotal, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error_total", "details": err.Error()})
+		return
+	}
+
+	// 4. Fetch daily orders history
+	type DailyOrder struct {
+		Date  string `db:"date" json:"date"`
+		Count int    `db:"count" json:"count"`
+	}
+	var history []DailyOrder
+	qHistory := "SELECT DATE_FORMAT(order_date, '%Y-%m-%d') as date, COUNT(*) as count FROM orders"
+	if filterStatus != "" {
+		qHistory += " JOIN order_headers oh_filter ON orders.order_header_id = oh_filter.id"
+	}
+	if startDate != "" || endDate != "" || filterStatus != "" {
+		qHistory += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+	qHistory += " GROUP BY date ORDER BY date ASC LIMIT 30" // Increased limit for filtered view
+	err = h.DB.Select(&history, qHistory, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error_history", "details": err.Error()})
+		return
+	}
+
+	// 5. Fetch status distribution (always return full distribution regardless of status filter, 
+	// but respect date filter)
+	type StatusCount struct {
+		Status string `db:"status" json:"status"`
+		Count  int    `db:"count" json:"count"`
+	}
+	var statuses []StatusCount
+	qStatus := "SELECT COALESCE(status, 'belum_bayar') as status, COUNT(*) as count FROM order_headers"
+	statusArgs := []interface{}{}
+	statusWhere := []string{"1=1"}
+	if startDate != "" {
+		statusWhere = append(statusWhere, "created_at >= ?")
+		statusArgs = append(statusArgs, startDate+" 00:00:00")
+	}
+	if endDate != "" {
+		statusWhere = append(statusWhere, "created_at <= ?")
+		statusArgs = append(statusArgs, endDate+" 23:59:59")
+	}
+	qStatus += " WHERE " + strings.Join(statusWhere, " AND ") + " GROUP BY COALESCE(status, 'belum_bayar')"
+	err = h.DB.Select(&statuses, qStatus, statusArgs...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error_status", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"order_item":  orderItem,
+		"order_robux": orderRobux,
+		"total_order": totalOrder,
+		"history":     history,
+		"statuses":    statuses,
+	})
+}
