@@ -265,6 +265,9 @@ func (h *AdminHandler) CreateRobux(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
+
+	h.addActivityLog(c, "Robux Created", fmt.Sprintf("Created package: %d Robux for %.2f", req.RobuxAmount, req.Price), "Package")
+
 	c.JSON(http.StatusCreated, gin.H{"robux": r})
 }
 
@@ -305,6 +308,9 @@ func (h *AdminHandler) UpdateRobux(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}
+
+	h.addActivityLog(c, "Robux Updated", fmt.Sprintf("Updated package to: %d Robux, %.2f", r.RobuxAmount, r.Price), "Package")
+
 	c.JSON(http.StatusOK, gin.H{"robux": r})
 }
 
@@ -317,6 +323,64 @@ func (h *AdminHandler) DeleteRobux(c *gin.Context) {
 	}
 	if _, err := h.DB.Exec("DELETE FROM robuxes WHERE id = ?", id); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "db_error"})
+		return
+	}
+
+	h.addActivityLog(c, "Robux Deleted", "Deleted a Robux package", "Package")
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *AdminHandler) addActivityLog(c *gin.Context, title string, content string, icon string) {
+	uname := "System"
+	if v, ok := c.Get("claims"); ok {
+		if claims, ok := v.(*auth.Claims); ok {
+			uname = claims.Username
+		}
+	}
+
+	_, _ = h.DB.Exec(
+		"INSERT INTO notifications (title, content, icon, is_read, created_at) VALUES (?, ?, ?, ?, ?)",
+		title, fmt.Sprintf("[%s] %s", uname, content), icon, false, time.Now(),
+	)
+}
+
+func (h *AdminHandler) ListNotifications(c *gin.Context) {
+	// Auto create table if not exists
+	_, _ = h.DB.Exec(`
+		CREATE TABLE IF NOT EXISTS notifications (
+			id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+			title VARCHAR(255) NOT NULL,
+			content TEXT NOT NULL,
+			icon VARCHAR(50) DEFAULT 'Bell',
+			is_read BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+
+	items := []models.Notification{}
+	err := h.DB.Select(&items, "SELECT * FROM notifications ORDER BY created_at DESC LIMIT 50")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error"})
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+func (h *AdminHandler) MarkNotificationRead(c *gin.Context) {
+	id := c.Param("id")
+	_, err := h.DB.Exec("UPDATE notifications SET is_read = TRUE WHERE id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *AdminHandler) MarkAllNotificationsRead(c *gin.Context) {
+	_, err := h.DB.Exec("UPDATE notifications SET is_read = TRUE WHERE is_read = FALSE")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})

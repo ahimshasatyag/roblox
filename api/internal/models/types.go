@@ -276,3 +276,12 @@ type CreateProductItemOrderRequest struct {
 	Phone         string `json:"phone" binding:"required"`
 	Email         string `json:"email" binding:"required"`
 }
+
+type Notification struct {
+	ID        uint64    `db:"id" json:"id"`
+	Title     string    `db:"title" json:"title"`
+	Content   string    `db:"content" json:"content"`
+	Icon      string    `db:"icon" json:"icon"`
+	IsRead    bool      `db:"is_read" json:"is_read"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}

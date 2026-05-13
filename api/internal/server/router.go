@@ -109,6 +109,9 @@ func SetupRouter(db *sqlx.DB, secret string) *gin.Engine {
 	ag.DELETE("/users/:id", admin.DeleteUser)
 	ag.GET("/roles", admin.ListRoles)
 	ag.GET("/stats", admin.GetDashboardStats)
+	ag.GET("/notifications", admin.ListNotifications)
+	ag.PUT("/notifications/:id/read", admin.MarkNotificationRead)
+	ag.PUT("/notifications/read-all", admin.MarkAllNotificationsRead)
 
 	cg := r.Group("/client")
 	cg.Use(middleware.Auth(secret), middleware.Scope("client"))
