@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { adminUserService } from "@/services/(admin)/users/index"
+import { adminUserRolesService } from "@/services/(admin)/userroles/index"
 import { UserRole } from "@/types/(admin)/users/index"
 
 export function useRoles() {
@@ -13,7 +13,7 @@ export function useRoles() {
         setLoading(true)
         setError(null)
         try {
-            const res = await adminUserService.getRoles()
+            const res = await adminUserRolesService.getRoles()
             setRoles(res.roles || [])
         } catch (err: any) {
             setError(err.message || "Failed to fetch roles")

@@ -3,7 +3,7 @@
 import { Plus, ShieldCheck } from "lucide-react"
 import AdminAppLayout from "@/components/layout/(admin)/AppLayout"
 import RoleTable from "@/components/shared/(admin)/userroles/RoleTable"
-import { useRoles } from "@/features/(admin)/users/useRoles"
+import { useRoles } from "@/features/(admin)/userroles/useRoles"
 import Link from "next/link"
 
 export default function UserRolesPage() {

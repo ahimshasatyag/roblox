@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, UserPlus, ChevronDown, Eye, EyeOff } from "lucide-react"
 import AdminAppLayout from "@/components/layout/(admin)/AppLayout"
 import { useUserStore } from "@/stores/(admin)/users/index"
-import { useRoles } from "@/features/(admin)/users/useRoles"
+import { useRoles } from "@/features/(admin)/userroles/useRoles"
 import { CreateUserRequest } from "@/types/(admin)/users/index"
 import Link from "next/link"
 
@@ -16,7 +16,7 @@ export default function AddUserPage() {
     const router = useRouter()
     const { createUser } = useUserStore()
     const { roles } = useRoles()
-    
+
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [formData, setFormData] = useState<CreateUserRequest>({

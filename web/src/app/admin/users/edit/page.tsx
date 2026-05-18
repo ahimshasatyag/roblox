@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, UserPlus, Eye, EyeOff, Edit3, Save } from "lucide-react"
 import AdminAppLayout from "@/components/layout/(admin)/AppLayout"
 import { useUserStore } from "@/stores/(admin)/users/index"
-import { useRoles } from "@/features/(admin)/users/useRoles"
+import { useRoles } from "@/features/(admin)/userroles/useRoles"
 import { adminUserService } from "@/services/(admin)/users/index"
 import { User, UpdateUserRequest } from "@/types/(admin)/users/index"
 import Link from "next/link"
@@ -20,7 +20,7 @@ function EditUserContent() {
 
     const { updateUser } = useUserStore()
     const { roles } = useRoles()
-    
+
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
     const [isEditMode, setIsEditMode] = useState(initialMode)
@@ -44,7 +44,7 @@ function EditUserContent() {
         setFetching(true)
         try {
             const userRes = await adminUserService.getUser(Number(userId))
-            
+
             setUserData(userRes.user)
             setFormData({
                 fullname: userRes.user.fullname,

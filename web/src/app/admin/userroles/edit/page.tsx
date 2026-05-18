@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ShieldCheck, Edit3, Save, Trash2 } from "lucide-react"
 import AdminAppLayout from "@/components/layout/(admin)/AppLayout"
-import { adminUserService } from "@/services/(admin)/users/index"
+import { adminUserRolesService } from "@/services/(admin)/userroles/index"
 import { adminAuthService } from "@/services/(admin)/auth/auth"
 import { UserRole } from "@/types/(admin)/users/index"
 import { MenuAdmin } from "@/types/(admin)/auth/index"
@@ -22,7 +22,7 @@ function EditRoleContent() {
     const [fetching, setFetching] = useState(true)
     const [isEditMode, setIsEditMode] = useState(initialMode)
     const [menus, setMenus] = useState<MenuAdmin[]>([])
-    
+
     const [roleData, setRoleData] = useState<UserRole | null>(null)
     const [formData, setFormData] = useState({
         role_name: "",
@@ -34,13 +34,13 @@ function EditRoleContent() {
         setFetching(true)
         try {
             // Fetch role data
-            const roleRes = await adminUserService.getRole(Number(roleId))
+            const roleRes = await adminUserRolesService.getRole(Number(roleId))
             // Fetch menus for permission options
             const menuRes = await adminAuthService.getMenus()
-            
+
             setRoleData(roleRes.role)
             setMenus(menuRes.menus || [])
-            
+
             setFormData({
                 role_name: roleRes.role.role_name,
                 // Assuming roleRes.role has permissions, if not we mock it for now
@@ -63,7 +63,7 @@ function EditRoleContent() {
 
         setLoading(true)
         try {
-            await adminUserService.updateRole(Number(roleId), formData)
+            await adminUserRolesService.updateRole(Number(roleId), formData)
             setIsEditMode(false)
             fetchInitialData()
         } catch (err) {
@@ -76,7 +76,7 @@ function EditRoleContent() {
     const handleDelete = async () => {
         if (!roleId || !confirm("Are you sure you want to delete this role?")) return
         try {
-            await adminUserService.deleteRole(Number(roleId))
+            await adminUserRolesService.deleteRole(Number(roleId))
             router.push("/admin/userroles")
         } catch (err) {
             console.error(err)
@@ -94,7 +94,7 @@ function EditRoleContent() {
 
     const permissionOptions = menus
         .filter(menu => !menu.nm_menu.toLowerCase().includes("dashboard"))
-        .flatMap(menu => 
+        .flatMap(menu =>
             powerOptions.map(power => ({
                 id: `${menu.id_menu}${power.id}`,
                 label: `${menu.nm_menu} | ${power.label}`
@@ -131,7 +131,7 @@ function EditRoleContent() {
 
             <div className="bg-[var(--background)] rounded-[50px] p-12 border border-[var(--color-muted)]/10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-[var(--color-primary)]/5 rounded-full blur-[100px] -mr-40 -mt-40"></div>
-                
+
                 <div className="relative z-10">
                     <div className="flex items-center justify-between mb-12">
                         <div className="flex items-center gap-6">
@@ -147,7 +147,7 @@ function EditRoleContent() {
                         </div>
 
                         {!isEditMode && (
-                            <button 
+                            <button
                                 onClick={handleDelete}
                                 className="p-4 rounded-2xl bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all group"
                                 title="Delete Role"
@@ -182,7 +182,7 @@ function EditRoleContent() {
                                 Wewenang (Permissions)
                             </label>
                             {isEditMode ? (
-                                <DualListbox 
+                                <DualListbox
                                     options={permissionOptions}
                                     selectedIds={formData.permissions}
                                     onChange={(ids) => setFormData({ ...formData, permissions: ids })}
@@ -216,7 +216,7 @@ function EditRoleContent() {
                                     className="w-full py-6 bg-[var(--foreground)] text-[var(--background)] font-black uppercase tracking-[0.5em] text-[10px] rounded-3xl shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                                 >
                                     <Edit3 size={16} />
-                                    Enter Edit Mode
+                                    Edit
                                 </button>
                             ) : (
                                 <div className="flex gap-4">
